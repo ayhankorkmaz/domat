@@ -1,5 +1,5 @@
 // Otomatik üretildi: tools/make-sw.py
-const CACHE = 'domat-f8790fd7f2';
+const CACHE = 'domat-ac287cd413';
 const ASSETS = [
  "./",
  "./index.html",
