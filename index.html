@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Domat - Boost Your Productivity</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22%3E%3Cellipse cx=%2220%22 cy=%2223%22 rx=%2216%22 ry=%2214%22 fill=%22%23ef4e3a%22/%3E%3Cellipse cx=%2214%22 cy=%2218%22 rx=%224%22 ry=%222.6%22 fill=%22%23fff%22 opacity=%22.45%22/%3E%3Cpath d=%22M20 11c-4-3-8-2-9 0 3 1 5 2 9 1 4 1 6 0 9-1-1-2-5-3-9 0z%22 fill=%22%235aa845%22/%3E%3C/svg%3E">
+<meta name="description" content="Domat: görev listeli 3D çiftlik Pomodoro zamanlayıcısı. Sen odaklan, Hasan Dede domatesleri yetiştirsin. A cozy 3D farm Pomodoro timer with tasks.">
+<meta property="og:title" content="Domat - Boost Your Productivity">
+<meta property="og:site_name" content="Domat">
+<meta property="og:description" content="Sen odaklan, Hasan Dede domatesleri yetiştirsin. · You focus. Grandpa Hasan grows the tomatoes.">
+<meta property="og:image" content="https://getdomat.com/og.jpg">
+<meta property="og:url" content="https://getdomat.com/">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://getdomat.com/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#ef4e3a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Domat">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="tg" cx=".35" cy=".35" r=".75"><stop offset="0" stop-color="#ff9c84"/><stop offset=".55" stop-color="#ef4e3a"/><stop offset="1" stop-color="#b8321f"/></radialGradient>
+    <radialGradient id="gg" cx=".35" cy=".35" r=".75"><stop offset="0" stop-color="#fff3b8"/><stop offset=".55" stop-color="#ffc53d"/><stop offset="1" stop-color="#c98a0c"/></radialGradient>
+    <symbol id="tomato" viewBox="0 0 40 40"><ellipse cx="20" cy="23" rx="16" ry="14" fill="url(#tg)"/><ellipse cx="14" cy="18" rx="4" ry="2.6" fill="#fff" opacity=".45" transform="rotate(-25 14 18)"/><path d="M20 10l3 -4M20 11c-4-3-8-2-9 0 3 1 5 2 9 1 4 1 6 0 9-1-1-2-5-3-9 0z" fill="#5aa845" stroke="#3d7f2d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="gtomato" viewBox="0 0 40 40"><ellipse cx="20" cy="23" rx="16" ry="14" fill="url(#gg)"/><ellipse cx="14" cy="18" rx="4" ry="2.6" fill="#fff" opacity=".6" transform="rotate(-25 14 18)"/><path d="M20 10l3 -4M20 11c-4-3-8-2-9 0 3 1 5 2 9 1 4 1 6 0 9-1-1-2-5-3-9 0z" fill="#5aa845" stroke="#3d7f2d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+<div id="app">
+  <canvas id="scene" data-i18n-aria="sceneAria" aria-label="3D çiftlik sahnesi"></canvas>
+  <div class="vignette"></div>
+  <div class="loading" id="loading" data-i18n="loading">Preparing the garden…</div>
+  <div class="intro" id="intro"><div><h1>Domat</h1><p data-i18n="tagline">You focus. Grandpa Hasan grows the tomatoes.</p></div></div>
+  <script>
+    // app.js yüklenene kadar görünen metinler: kayıtlı dil Türkçeyse hemen Türkçeye çevir (varsayılan İngilizce)
+    try { if ((JSON.parse(localStorage.getItem('domat-v1')) || {}).profile?.lang === 'tr') { document.documentElement.lang = 'tr'; document.getElementById('loading').textContent = 'Bahçe hazırlanıyor…'; document.querySelector('#intro p').textContent = 'Sen odaklan, Hasan Dede domatesleri yetiştirsin.'; } } catch (e) { }
+  </script>
+
+  <header class="top">
+    <div class="harvest card" id="harvest">
+      <svg aria-hidden="true"><use href="#tomato"/></svg>
+      <div class="txt"><b id="hvCount">0 domates</b><small id="hvSub"></small><div class="hbar"><i id="hvBar"></i></div></div>
+    </div>
+    <div class="tools">
+      <button class="ibtn" id="btnTasks" data-i18n-title="ttTasks" data-i18n-aria="ttTasks" aria-label="Görevler"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg><span class="cnt" id="taskCount" hidden></span></button>
+      <button class="ibtn" id="btnAmbient" data-i18n-title="ttAmb" data-i18n-aria="ttAmb" aria-label="Ortam sesi" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 11v2"/></svg></button>
+      <button class="ibtn" id="btnStats" data-i18n-title="ttStats" data-i18n-aria="ttStats" aria-label="Hasat defteri"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></button>
+      <button class="ibtn" id="btnSettings" data-i18n-title="ttSettings" data-i18n-aria="ttSettings" aria-label="Ayarlar"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+      <button class="ibtn" id="btnPip" hidden data-i18n-title="ttPip" data-i18n-aria="ttPip" aria-label="Mini zamanlayıcı"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><rect x="12" y="11" width="7" height="6" rx="1.2"/></svg></button>
+      <button class="ibtn" id="btnZen" data-i18n-title="ttZen" data-i18n-aria="ttZen" aria-label="Zen modu"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <button class="ibtn" id="btnFull" data-i18n-title="ttFull" data-i18n-aria="ttFull" aria-label="Tam ekran"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <div class="pop card" id="ambientPop" role="menu" hidden>
+        <button role="menuitemradio" data-amb="off"><i></i><span data-i18n="aOff">Sessiz</span></button>
+        <button role="menuitemradio" data-amb="birds"><i></i><span data-i18n="aBirds">Kuş sesleri</span></button>
+        <button role="menuitemradio" data-amb="rain"><i></i><span data-i18n="aRain">Yağmur</span></button>
+        <button role="menuitemradio" data-amb="wind"><i></i><span data-i18n="aWind">Rüzgâr</span></button>
+        <button role="menuitemradio" data-amb="evening"><i></i><span data-i18n="aEvening">Yaz akşamı</span></button>
+        <div class="vol"><span data-i18n="aVol">Ses</span><input type="range" id="volPop" min="0" max="1" step="0.05" data-i18n-aria="sVolume" aria-label="Ses seviyesi"></div>
+      </div>
+    </div>
+  </header>
+
+  <aside class="tasks card" id="tasksPanel" hidden aria-labelledby="tkTitle">
+    <header><h2 id="tkTitle" data-i18n="tkTitle">Görevler</h2><button class="ibtn small" id="tclose" data-i18n-aria="close" aria-label="Kapat"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <div class="tsum" id="tsum" aria-live="polite"></div>
+    <div id="taddWrap"></div>
+    <ul class="tlist" id="tlist"></ul>
+    <div class="tkhint" id="tkeys"></div>
+  </aside>
+
+  <div class="zenclock" id="zenClock">25:00</div>
+  <button class="ibtn zenexit" id="btnZenExit" data-i18n-aria="ttZenExit" aria-label="Zen modundan çık"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <div class="bubble" id="bubble" hidden><small data-i18n="farmer">Hasan Dede</small><span id="bubbleText"></span></div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <div class="tip" id="tip" hidden></div>
+
+  <section class="panel card" id="panel" data-i18n-aria="timerAria" aria-label="Pomodoro zamanlayıcı">
+    <nav class="phases" id="phases">
+      <button data-phase="focus" aria-pressed="true" data-i18n="focus">Odak</button>
+      <button data-phase="short" aria-pressed="false" data-i18n="short">Kısa mola</button>
+      <button data-phase="long" aria-pressed="false" data-i18n="long">Uzun mola</button>
+    </nav>
+    <div class="clock" id="clock" role="timer"></div>
+    <div class="status" id="status"><i></i><span id="statusText"></span></div>
+    <div class="bar"><i id="barFill"></i></div>
+    <div class="cycle"><div class="dots" id="dots"></div><span id="cycleText">Set 1 · 0/4</span></div>
+    <div class="taskrow"><button type="button" class="activetask none" id="activeTask"></button><button type="button" class="intbtn" id="btnInt" hidden data-i18n-title="intTitle" data-i18n-aria="intTitle"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg><span id="intCount"></span></button></div>
+    <div class="controls">
+      <button class="cbtn" id="btnReset" data-i18n-title="ttReset" data-i18n-aria="ttReset" aria-label="Sıfırla"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+      <button class="main" id="btnMain"><svg viewBox="0 0 24 24" id="mainIcon"><path d="M7 4.5v15l13-7.5z"/></svg><span id="mainLabel">Ekime başla</span></button>
+      <button class="cbtn" id="btnSkip" data-i18n-title="ttSkip" data-i18n-aria="ttSkip" aria-label="Sonraki aşama"><svg viewBox="0 0 24 24"><path d="M5 5l10 7-10 7z"/><path d="M19 5v14"/></svg></button>
+    </div>
+  </section>
+
+  <div class="hint" id="hint" data-i18n-html="hint"></div>
+
+
+  <div class="sheet" id="settingsSheet" hidden>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+      <h2 id="setTitle" data-i18n="sTitle">Ayarlar</h2>
+      <p class="sub" data-i18n="sSub">Değişiklikler hemen kaydedilir.</p>
+      <h3 data-i18n="sProfile">Profil</h3>
+      <div class="row"><label for="setName" data-i18n="sName">Adın</label><div class="ctl"><input class="txtin" id="setName" maxlength="24" autocomplete="given-name" data-i18n-ph="sNamePh"></div></div>
+      <div class="row"><label data-i18n="sLang">Dil</label><div class="ctl"><div class="seg" role="group" data-i18n-aria="sLang"><button type="button" data-lang="en" aria-pressed="true">English</button><button type="button" data-lang="tr" aria-pressed="false">Türkçe</button></div></div></div>
+      <h3 data-i18n="sDur">Süreler</h3>
+      <div class="row"><label for="setFocus" data-i18n="sFocus">Odak</label><div class="ctl"><input type="range" id="setFocus" min="5" max="90" step="5"><output id="outFocus"></output></div></div>
+      <div class="row"><label for="setShort" data-i18n="sShort">Kısa mola</label><div class="ctl"><input type="range" id="setShort" min="1" max="30" step="1"><output id="outShort"></output></div></div>
+      <div class="row"><label for="setLong" data-i18n="sLong">Uzun mola</label><div class="ctl"><input type="range" id="setLong" min="5" max="45" step="5"><output id="outLong"></output></div></div>
+      <div class="row"><label for="setInterval" data-i18n="sInterval">Uzun mola her</label><div class="ctl"><input type="range" id="setInterval" min="2" max="8" step="1"><output id="outInterval"></output></div></div>
+      <div class="row"><label for="setGoal" data-i18n="sGoal">Günlük domates hedefi</label><div class="ctl"><input type="range" id="setGoal" min="5" max="80" step="5"><output id="outGoal"></output></div></div>
+      <h3 data-i18n="sFlow">Akış</h3>
+      <div class="row"><label for="setAutoBreak" data-i18n="sAutoBreak">Molaları otomatik başlat</label><button class="sw-toggle" id="setAutoBreak" role="switch" aria-checked="false"></button></div>
+      <div class="row"><label for="setAutoFocus" data-i18n="sAutoFocus">Odağı otomatik başlat</label><button class="sw-toggle" id="setAutoFocus" role="switch" aria-checked="false"></button></div>
+      <div class="row"><label for="setNotify" data-i18n="sNotify">Masaüstü bildirimi</label><button class="sw-toggle" id="setNotify" role="switch" aria-checked="false"></button></div>
+      <div class="row"><label for="setFast" data-i18n="sFast">Hızlı deneme (dakika yerine saniye)</label><button class="sw-toggle" id="setFast" role="switch" aria-checked="false"></button></div>
+      <div class="row"><label for="setVolume" data-i18n="sVolume">Ses seviyesi</label><div class="ctl"><input type="range" id="setVolume" min="0" max="1" step="0.05"><output id="outVolume"></output></div></div>
+      <h3 data-i18n="sLook">Görünüm</h3>
+      <div class="row"><label for="setSeason" data-i18n="sSeason">Mevsim</label><div class="ctl"><select class="txtin" id="setSeason"></select></div></div>
+      <div class="row"><label for="setQuality" data-i18n="sQuality">Grafik kalitesi</label><div class="ctl"><select class="txtin" id="setQuality"></select></div></div>
+      <h3 data-i18n="sSound">Ses</h3>
+      <div class="row"><label for="setAmbVol" data-i18n="sAmbVol">Ortam sesi</label><div class="ctl"><input type="range" id="setAmbVol" min="0" max="1" step="0.05"><output id="outAmbVol"></output></div></div>
+      <div class="row"><label for="setFxVol" data-i18n="sFxVol">Efektler ve Hasan Dede</label><div class="ctl"><input type="range" id="setFxVol" min="0" max="1" step="0.05"><output id="outFxVol"></output></div></div>
+      <div class="row"><label for="setTick" data-i18n="sTick">Odakta tik-tak</label><button class="sw-toggle" id="setTick" role="switch" aria-checked="false"></button></div>
+      <div class="row"><label for="setChime" data-i18n="sChime">Odak bitiş sesi</label><div class="ctl"><select class="txtin" id="setChime"></select></div></div>
+      <h3 data-i18n="sKeys">Kısayollar</h3>
+      <div class="keys">
+        <kbd data-i18n="kSpace">Boşluk</kbd><span data-i18n="kSpaceD">Başlat / duraklat</span>
+        <kbd>T</kbd><span data-i18n="kTD">Görev listesini aç / kapat</span>
+        <kbd>N</kbd><span data-i18n="kND">Yeni görev ekle</span>
+        <kbd>1–9</kbd><span data-i18n="kNumD">Aktif görevi seç</span>
+        <kbd>D</kbd><span data-i18n="kDD">Dikkatim dağıldı</span>
+        <kbd>S</kbd><span data-i18n="kSD">Sonraki aşamaya geç</span>
+        <kbd>R</kbd><span data-i18n="kRD">Aşamayı sıfırla</span>
+        <kbd>P</kbd><span data-i18n="kPD">Mini zamanlayıcı</span>
+        <kbd>Z</kbd><span data-i18n="kZD">Zen modu</span>
+        <kbd>F</kbd><span data-i18n="kFD">Tam ekran</span>
+        <kbd>M</kbd><span data-i18n="kMD">Sesi kapat / aç</span>
+        <kbd>A</kbd><span data-i18n="kAD">Ortam sesi menüsü</span>
+      </div>
+      <h3 data-i18n="sData">Veri</h3>
+      <p class="note" data-i18n="sDataNote">Verilerin yalnızca bu tarayıcıda saklanır. Ara sıra yedek al.</p>
+      <div class="btnrow" style="justify-content:flex-start;margin-top:0">
+        <button class="btn" id="btnExport" data-i18n="bkExport">Yedeği indir</button>
+        <button class="btn" id="btnImport" data-i18n="bkImport">Yedekten yükle</button>
+        <button class="btn" id="btnCsv" data-i18n="bkCsv">Seansları CSV indir</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+      <div class="btnrow" style="justify-content:flex-start;margin-top:10px">
+        <button class="btn danger" id="btnClearToday" data-i18n="sClearToday">Bugünün bahçesini sıfırla</button>
+        <button class="btn danger" id="btnClearAll" data-i18n="sClearAll">Tüm geçmişi sil</button>
+      </div>
+      <div class="btnrow" style="justify-content:flex-start;margin-top:18px"><button class="btn" id="btnAbout" data-i18n="sAbout">Hakkında ve gizlilik</button><a class="btn" id="lnkContact" href="https://x.com/ayhankorkmaz_" target="_blank" rel="noopener" data-i18n="sContact">İletişim</a></div>
+      <div class="sheetcredit"><span data-i18n="byFull">Yapan: Ayhan Korkmaz</span><a href="https://ayhankorkmaz.com" target="_blank" rel="noopener">ayhankorkmaz.com</a><a href="https://x.com/ayhankorkmaz_" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.4L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8L17.8 3zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5z" fill="currentColor"/></svg>@ayhankorkmaz_</a></div>
+      <div class="btnrow"><button class="btn primary" data-close data-i18n="ok">Tamam</button></div>
+    </div>
+  </div>
+
+  <div class="sheet" id="statsSheet" hidden>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="statTitle">
+      <div class="sthead"><div><h2 id="statTitle" data-i18n="stTitle">Hasat defteri</h2><p class="sub" id="statSub"></p></div>
+        <button type="button" class="btn primary" id="btnCard"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 15l3-3 2 2 3-3"/></svg><span data-i18n="cardBtn">Hasat kartı</span></button></div>
+      <div class="kpis" id="kpis"></div>
+      <div class="seg statseg" id="statPeriod" role="group"><button type="button" data-per="week" aria-pressed="true" data-i18n="perWeek">Bu hafta</button><button type="button" data-per="month" aria-pressed="false" data-i18n="perMonth">Bu ay</button><button type="button" data-per="all" aria-pressed="false" data-i18n="perAll">Tümü</button></div>
+      <div class="insights" id="insights"></div>
+      <h3 data-i18n="stTags">Etiketlere göre odak</h3>
+      <div class="hbars" id="tagBars"></div>
+      <h3 data-i18n="stTopTasks">En çok emek verilen görevler</h3>
+      <div class="hbars" id="taskBars"></div>
+      <h3 data-i18n="stHours">Günün saatleri</h3>
+      <div class="hours" id="hours"></div>
+      <p class="note" id="bestHour"></p>
+      <h3 data-i18n="stYear">Son 12 ay</h3>
+      <div class="heatwrap" id="heatWrap"><div class="heat" id="heat"></div></div>
+      <div class="heatleg" id="heatLeg"></div>
+      <h3 data-i18n="stWeek">Son 7 gün · domates</h3>
+      <div class="week" id="week"></div>
+      <h3 data-i18n="stProg">Bahçe gelişimi</h3>
+      <div class="prognext" id="progNext"></div>
+      <div class="badges" id="progList"></div>
+      <div class="varline" id="varLine"></div>
+      <h3 data-i18n="stBadges">Rozetler</h3>
+      <div class="badges" id="badges"></div>
+      <h3 data-i18n="stLog">Bugünün seansları</h3>
+      <div class="log" id="log"></div>
+      <div class="btnrow"><button class="btn primary" data-close data-i18n="close">Kapat</button></div>
+    </div>
+  </div>
+
+  <div class="sheet" id="pickSheet" hidden>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="pickTitle" style="max-width:420px">
+      <h2 id="pickTitle" data-i18n="pickTitle">Bu odakta ne yapacaksın?</h2>
+      <p class="sub" data-i18n="pickSub">Seçtiğin görevin adı fide yatağının tabelasına yazılır.</p>
+      <div class="picklist" id="pickList"></div>
+    </div>
+  </div>
+
+  <div class="sheet" id="cardSheet" hidden>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="cardH" style="max-width:440px">
+      <h2 id="cardH" data-i18n="cardTitle">Günün hasat kartı</h2>
+      <p class="sub" id="cardSubTxt" data-i18n="cardSub">İndir ve paylaş. X'te görselle birlikte paylaşabilirsin.</p>
+      <img id="cardImg" class="cardimg" alt="">
+      <div class="btnrow"><button class="btn" data-close data-i18n="close">Kapat</button><button class="btn" id="cardShare" hidden data-i18n="cardShare">Paylaş</button><button class="btn" id="cardX" hidden data-i18n="cardX">X'te paylaş</button><button class="btn primary" id="cardDl" data-i18n="cardDl">İndir</button></div>
+    </div>
+  </div>
+
+  <div class="sheet" id="aboutSheet" hidden>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="aboutH">
+      <h2 id="aboutH" data-i18n="abTitle">Domat hakkında</h2>
+      <div class="about" data-i18n-html="abBody"></div>
+      <div class="btnrow"><button class="btn primary" data-close data-i18n="ok">Tamam</button></div>
+    </div>
+  </div>
+
+  <div class="sheet" id="intSheet" hidden>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="intH" style="max-width:420px">
+      <h2 id="intH" data-i18n="intTitle">Dikkatin mi dağıldı?</h2>
+      <p class="sub" data-i18n="intSub">Kaydet ve odağa dön. Sayaç durmaz.</p>
+      <div class="picklist">
+        <div class="intin"><button type="button" class="pickbtn" data-int="in"><b data-i18n="intIn">Aklıma bir şey geldi</b><span class="pp" data-i18n="intInD">iç kesinti</span></button>
+          <input class="txtin" id="intNote" maxlength="80" data-i18n-ph="intNotePh"></div>
+        <button type="button" class="pickbtn" data-int="out"><b data-i18n="intOut">Biri ya da bir şey böldü</b><span class="pp" data-i18n="intOutD">dış kesinti</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="onboardSheet" hidden>
+    <div class="card ob" role="dialog" aria-modal="true" id="obBody"></div>
+  </div>
+
+  <div class="sheet" id="confirmSheet" hidden>
+    <div class="card" role="alertdialog" aria-modal="true" aria-labelledby="cfTitle" style="max-width:380px">
+      <h2 id="cfTitle"></h2>
+      <p class="sub" id="cfText"></p>
+      <div class="btnrow"><button class="btn" id="cfNo">Vazgeç</button><button class="btn" id="cfAlt" hidden></button><button class="btn primary" id="cfYes"></button></div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{"imports":{
+  "three":"./vendor/three/build/three.module.js",
+  "three/addons/":"./vendor/three/examples/jsm/",
+  "cannon-es":"./vendor/cannon-es/cannon-es.js"
+}}
+</script>
+<script type="module" src="js/app.js"></script>
+<script>
+/* index.html çift tıkla (file://) açılınca modüller yüklenmez; takılı kalmak yerine ne yapılacağını söyle */
+if (location.protocol === 'file:') setTimeout(() => { const l = document.getElementById('loading'); if (l && l.offsetParent !== null) l.innerHTML = 'Bu dosya çift tıkla açılmaz. Aynı klasördeki <b>Domat.html</b> dosyasını aç.<br><small>This file needs a server. Open <b>Domat.html</b> instead.</small>'; }, 2500);
+</script>
+</body>
+</html>

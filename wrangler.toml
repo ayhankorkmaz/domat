@@ -1,0 +1,4 @@
+# Cloudflare Pages: getdomat.com (proje "domat", yayın klasörü dist/: python3 tools/build-dist.py).
+name = "domat"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-10-01"
