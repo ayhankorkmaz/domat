@@ -42,6 +42,8 @@ const PAGE_TITLE = 'Domat - Boost Your Productivity'; // sekme ve arama başlı�
 const LOC = () => (LANG === 'tr' ? 'tr-TR' : 'en-US');
 function tr(key, ...a) { const v = (STR[LANG] && STR[LANG][key]) ?? STR.tr[key]; return typeof v === 'function' ? v(...a) : (v ?? key); }
 const LN = () => LINES_ALL[LANG];
+// Cadılar Bayramı'nda Hasan Dede çoğu zaman mevsimlik konuşur (hw_ anahtarları)
+function LNP(k) { const L = LN(), h = L['hw_' + k]; return h && typeof hwOn === 'function' && hwOn() && Math.random() < .6 ? h : L[k]; }
 function nm() { const n = (data?.profile?.name || '').trim(); return n || (LANG === 'tr' ? 'evlat' : 'friend'); }
 function fillT(s, vars = {}) { return s.replace(/\{name\}/g, nm()).replace(/\{t\}/g, vars.t ?? ''); }
 function hm(ts) { return new Date(ts).toLocaleTimeString(LOC(), { hour: '2-digit', minute: '2-digit' }); }
@@ -59,7 +61,7 @@ function applyI18n() {
    Persistence
    ================================================================ */
 const KEY = 'domat-v1';
-const DEFAULTS = { season: 'auto', quality: 'auto', ambVol: 1, fxVol: 1, tick: false, chime: 'bells', focus: 25, short: 5, long: 15, interval: 4, goal: 40, autoBreak: true, autoFocus: false, volume: .7, ambient: 'birds', notify: false, fast: false, muted: false, tasksOpen: null };
+const DEFAULTS = { season: 'auto', halloween: true, quality: 'auto', ambVol: 1, fxVol: 1, tick: false, chime: 'bells', focus: 25, short: 5, long: 15, interval: 4, goal: 40, autoBreak: true, autoFocus: false, volume: .7, ambient: 'birds', notify: false, fast: false, muted: false, tasksOpen: null };
 let data = null;
 try { data = JSON.parse(localStorage.getItem(KEY)); } catch (e) { data = null; }
 data = data || {};
@@ -209,6 +211,8 @@ const AudioFX = {
     notes.forEach((f, i) => { const st = t + i * .2; const o = this.ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(f * 1.5, st); const vib = this.ctx.createOscillator(), vg = this.ctx.createGain(); vib.frequency.value = 6; vg.gain.value = 9; vib.connect(vg); vg.connect(o.frequency); vib.start(st); vib.stop(st + .22); this.env(o, st, .03, .045, .17); o.start(st); o.stop(st + .22); }); },
   splash() { if (!this.ctx) return; const t = this.ctx.currentTime; this.noise(t, .3, .1, 'bandpass', 1500, .7); this.osc('sine', 600, t + .02, .15, .08, null, 1400); },
   creak() { if (!this.ctx) return; const t = this.ctx.currentTime; this.osc('sawtooth', 90, t, .5, .03, null, 70); },
+  // hayaletin "böö"ü: titreyerek alçalan yumuşak ton + nefes
+  boo() { if (!this.ctx) return; const t = this.ctx.currentTime; const o = this.osc('sine', 540, t, .75, .13, null, 190); const vib = this.ctx.createOscillator(), vg = this.ctx.createGain(); vib.frequency.value = 7; vg.gain.value = 22; vib.connect(vg); vg.connect(o.frequency); vib.start(t); vib.stop(t + .8); this.noise(t, .55, .03, 'bandpass', 650, 1.5); },
 };
 
 /* ================================================================
@@ -578,7 +582,7 @@ function buildFence() {
   const fg = new THREE.Group(); for (const o of scene.children.slice()) if (!before.has(o)) fg.add(o); scene.add(fg); return fg;
 }
 fenceGroup = buildFence();
-(() => {
+const scarecrow = (() => {
   // scarecrow
   const sc = new THREE.Group(); sc.position.set(10.6, 0, -1.6); sc.rotation.y = -.5; scene.add(sc);
   add(new THREE.CylinderGeometry(.05, .05, 1.9, 6), M('#8a5a3b'), 0, .95, 0, sc); const arm = add(new THREE.CylinderGeometry(.04, .04, 1.3, 6), M('#8a5a3b'), 0, 1.45, 0, sc); arm.rotation.z = Math.PI / 2;
@@ -587,6 +591,9 @@ fenceGroup = buildFence();
   add(new THREE.CylinderGeometry(.42, .42, .03, 20), M('#e9c46a'), 0, 2.08, 0, sc); add(new THREE.CylinderGeometry(.18, .22, .2, 16), M('#e9c46a'), 0, 2.18, 0, sc);
   for (const s of [-1, 1]) { add(SPH_LO, M('#2d2320'), s * .08, 1.95, .21, sc).scale.setScalar(.03); add(ICO, M('#f2c95a'), s * .7, 1.42, 0, sc).scale.set(.12, .08, .08); }
   add(new THREE.TorusGeometry(.07, .015, 6, 12, Math.PI), M('#2d2320'), 0, 1.84, .21, sc).rotation.z = Math.PI;
+  // kafa, şapka, gözler ve ağız (Cadılar Bayramı'nda balkabağı kafayla değişir); kollardaki saman uçları kalır
+  const head = sc.children.filter(m => m.position.y > 1.7);
+  return { sc, head };
 })();
 
 /* ================================================================
@@ -789,6 +796,11 @@ const STEM_CURVE = new THREE.CatmullRomCurve3([V(0, 0, 0), V(.03, .35, .02), V(-
 const STEM_GEO = new THREE.TubeGeometry(STEM_CURVE, 24, .035, 6);
 const TOM_GEO = (() => { const g = new THREE.SphereGeometry(1, 22, 16); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); const a = Math.atan2(z, x); const lobe = 1 + .05 * Math.cos(a * 5) * (1 - Math.abs(y)); p.setXYZ(i, x * lobe, y * .82, z * lobe); } g.computeVertexNormals(); return g; })();
 const CALYX_GEO = (() => { const g = new THREE.ConeGeometry(.5, .25, 5, 1); g.translate(0, .1, 0); g.scale(1, .5, 1); return g; })();
+// balkabağı (Cadılar Bayramı): 8 dilimli basık gövde, tepesi sap için çukur; merkez y=0, taban -.72
+const PUMPKIN_GEO = (() => { const g = new THREE.SphereGeometry(1, 32, 20); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); const a = Math.atan2(z, x); const k = (1 + .09 * Math.pow(Math.abs(Math.cos(a * 4)), .6) - .045) * (1 - .1 * y ** 4); p.setXYZ(i, x * k, y * .72 - (y > .8 ? (y - .8) * .9 : 0), z * k); } g.computeVertexNormals(); return g; })();
+const PK_STEM_GEO = (() => { const g = new THREE.CylinderGeometry(.06, .1, .34, 7); g.translate(0, .17, 0); return g; })();
+const PK_STEM_M = M('#6b7a33', { roughness: .9 }), PK_M = M('#f07a1a', { roughness: .55 }), PK_ORANGE = new THREE.Color('#f07a1a');
+const BAT_WING_GEO = (() => { const sh = new THREE.Shape(); sh.moveTo(0, .03); sh.lineTo(.2, .1); sh.lineTo(.44, .05); sh.quadraticCurveTo(.37, -.02, .39, -.1); sh.quadraticCurveTo(.31, -.04, .26, -.1); sh.quadraticCurveTo(.19, -.03, .14, -.09); sh.quadraticCurveTo(.08, -.02, 0, -.04); sh.closePath(); const g = new THREE.ShapeGeometry(sh); g.rotateX(Math.PI / 2); return g; })();
 const leafMats = [M('#4f9a3c'), M('#5fae47'), M('#3f8a2f')];
 const PS = 1.65;
 const GREEN_T = new THREE.Color('#7cc04a'), ORANGE_T = new THREE.Color('#ff9a3c'), RED_T = new THREE.Color('#e8342a');
@@ -816,6 +828,7 @@ class Plant {
       const f = add(SPH_LO, M('#ffe14a', { emissive: '#ffcc00', emissiveIntensity: .2 }), tg.position.x, tg.position.y + .03, tg.position.z, g, false); f.scale.setScalar(.0001); this.flowers.push(f);
     }
     this.mound = add(SPH, M('#5b3a26', { roughness: 1 }), 0, -.02, 0, g); this.mound.scale.set(.32, .08, .32);
+    if (rec.pumpkin) { const pk = this.pk = new THREE.Group(); pk.position.set(-.22, .0, .17); g.add(pk); this.pkMat = new THREE.MeshStandardMaterial({ color: GREEN_T.clone(), roughness: .5 }); add(PUMPKIN_GEO, this.pkMat, 0, .72, 0, pk); add(PK_STEM_GEO, PK_STEM_M, .02, 1.22, 0, pk, false).rotation.z = -.3; pk.userData = { picked: false }; pk.scale.setScalar(.0001); }
     this.hit = add(new THREE.CylinderGeometry(.55, .55, 1.5, 8), new THREE.MeshBasicMaterial({ visible: false }), 0, .75, 0, g, false); this.hit.userData.plant = this;
     this.shown = 0; this.planted = rec.state !== 'growing' || rec.planted; this.shake = 0; this.removing = 0; this.bounce = 0;
     if (rec.title) { this.sign = makeSign(plot, rec.title, rec.color); if (rec.state !== 'growing') this.sign.k = 1; }
@@ -835,6 +848,7 @@ class Plant {
     this.toms.forEach((tg, i) => { const u = tg.userData; const s = u.picked || harvested || this.rec.state === 'dead' ? 0 : Math.max(.0001, easeOutBack(tomK) * u.size); if (!u.flying) tg.scale.setScalar(s || .0001); this.flowers[i].scale.setScalar(Math.max(.0001, flowerK * .05)); });
     const ripe = smoothstep(.82, 1, G);
     if (ripe < .5) this.mat.color.copy(GREEN_T).lerp(ORANGE_T, ripe * 2); else this.mat.color.copy(ORANGE_T).lerp(this.ripeC, (ripe - .5) * 2);
+    if (this.pk) { const gone = this.pk.userData.picked || harvested || this.rec.state === 'dead'; this.pk.scale.setScalar(gone ? .0001 : Math.max(.0001, easeOutBack(tomK) * .12)); this.pkMat.color.copy(GREEN_T).lerp(PK_ORANGE, ripe); }
   }
   applyDead() { this.stem.material = M('#8a6a45'); this.leaves.forEach(L => L.children.forEach(m => m.material = M(pick(['#9a7a4a', '#8a6a3a', '#a6884f'])))); this.g.rotation.z = .25; }
   wither() { this.rec.state = 'dead'; this.applyDead(); this.apply(this.shown); for (let k = 0; k < 14; k++) Petals.spawn(this.g.position.clone().add(V(rand(-.3, .3), rand(.3, 1), rand(-.3, .3))), pick(['#9a7a4a', '#8a6a3a', '#b08d55']), V(rand(-.5, .5), rand(0, .5), rand(-.5, .5))); }
@@ -1036,13 +1050,13 @@ function flyTomato(plant, i) {
   flights.push({ m, from, t: 0, dur: .5, gold: tg.userData.gold });
 }
 const fruits = [];
-function spawnFruit(p, v, gold, color = '#e8342a') {
-  const r = .12; const body = new CANNON.Body({ mass: .2, material: fruitMat, shape: new CANNON.Sphere(r), linearDamping: .1, angularDamping: .4, position: new CANNON.Vec3(p.x, p.y, p.z) });
+function spawnFruit(p, v, gold, color = '#e8342a', pumpkin = false) {
+  const r = pumpkin ? .19 : .12; const body = new CANNON.Body({ mass: .2, material: fruitMat, shape: new CANNON.Sphere(r), linearDamping: .1, angularDamping: .4, position: new CANNON.Vec3(p.x, p.y, p.z) });
   body.sleepSpeedLimit = .15; body.sleepTimeLimit = .5; body.velocity.set(v.x, v.y, v.z); body.angularVelocity.set(rand(-4, 4), rand(-4, 4), rand(-4, 4));
   body.addEventListener('collide', e => { const iv = Math.abs(e.contact.getImpactVelocityAlongNormal()); if (iv > 1) AudioFX.tock(iv); });
   world.addBody(body);
-  const mesh = new THREE.Mesh(TOM_GEO, gold ? M('#ffc53d', { roughness: .2, metalness: .35, emissive: '#ff9d00', emissiveIntensity: .35 }) : M(color, { roughness: .3 })); mesh.scale.setScalar(r); mesh.castShadow = true; scene.add(mesh);
-  const cal = new THREE.Mesh(CALYX_GEO, M('#4f9a3c')); cal.position.y = .85; mesh.add(cal);
+  const mesh = new THREE.Mesh(pumpkin ? PUMPKIN_GEO : TOM_GEO, pumpkin ? PK_M : gold ? M('#ffc53d', { roughness: .2, metalness: .35, emissive: '#ff9d00', emissiveIntensity: .35 }) : M(color, { roughness: .3 })); mesh.scale.setScalar(r); mesh.castShadow = true; scene.add(mesh);
+  const cal = new THREE.Mesh(pumpkin ? PK_STEM_GEO : CALYX_GEO, pumpkin ? PK_STEM_M : M('#4f9a3c')); cal.position.y = pumpkin ? .5 : .85; mesh.add(cal);
   const f = { body, mesh }; mesh.userData.fruit = f; fruits.push(f);
   if (fruits.length > 55) removeFruit(fruits[0]);
 }
@@ -1061,7 +1075,7 @@ function freePlot() {
   if (data.garden.rows < 3) { expandGarden(true); return PLOTS.length - 4; }
   let old = -1, oldAt = Infinity;
   for (let i = 0; i < PLOTS.length; i++) { const r = recs[i]; if (r && r.state === 'ripe' && (r.at || 0) < oldAt) { old = i; oldAt = r.at || 0; } }
-  if (old >= 0) { const r = recs[old], d = today(); d.tomatoes += r.n || 0; r.state = 'harvested'; PLOTS[old].plant?.apply(1); save(true); updateHarvestUI(true); toast(tr('gAutoHarvest'), tr('tCrateTotal', d.tomatoes)); }
+  if (old >= 0) { const r = recs[old], d = today(); d.tomatoes += r.n || 0; bankPumpkin(r); r.state = 'harvested'; PLOTS[old].plant?.apply(1); save(true); updateHarvestUI(true); toast(tr('gAutoHarvest'), tr('tCrateTotal', d.tomatoes)); }
   return old;
 }
 function startPlanting() {
@@ -1069,7 +1083,7 @@ function startPlanting() {
   const recs = today().plots; const old = PLOTS[i].plant;
   const golden = S.setDone === CFG.interval - 1;
   const n = clamp(Math.round(CFG.focus / 5), 3, 8);
-  const tk = activeTask(), vr = varietyFor(tk?.tag); recs[i] = { state: 'growing', seed: (Math.random() * 1e9) | 0, n: clamp(n + VARIETIES[vr].dn, 3, 10), golden, g: 0, planted: false, at: Date.now(), taskId: tk?.id || null, title: tk?.title || '', color: tk ? tagColor(tk.tag) || '#ef4e3a' : null, variety: vr };
+  const tk = activeTask(), vr = varietyFor(tk?.tag); recs[i] = { state: 'growing', seed: (Math.random() * 1e9) | 0, n: clamp(n + VARIETIES[vr].dn, 3, 10), golden, g: 0, planted: false, at: Date.now(), taskId: tk?.id || null, title: tk?.title || '', color: tk ? tagColor(tk.tag) || '#ef4e3a' : null, variety: vr, ...(hwOn() ? { pumpkin: true } : {}) };
   S.curPlot = i; S.intIn = 0; S.intOut = 0; save(true);
   const plot = PLOTS[i]; const q0 = F.queue.length;
   F.goTo(plot.stand, 'garden', 'fToGarden', plot.aisle);
@@ -1083,7 +1097,7 @@ function startPlanting() {
   F.task({ type: 'equip', tool: 'can' });
   F.task({ type: 'anim', name: 'water', dur: 2.4, status: 'fWater', onStart: () => { WATER = { plot }; AudioFX.water(2.2); }, onEnd: () => { WATER = null; } });
   F.task({ type: 'equip', tool: null });
-  F.task({ type: 'call', fn: () => F.say(recs[i]?.title ? fillT(pick(LN().task), { t: recs[i].title }) : pick(LN().plant)) });
+  F.task({ type: 'call', fn: () => F.say(recs[i]?.title ? fillT(pick(LN().task), { t: recs[i].title }) : pick(LNP('plant'))) });
   F.goTo(WP.BENCH, 'porch', 'fToPorch');
   F.task({ type: 'face', yaw: 0 }); F.task({ type: 'sit', end: { sitting: true }, status: 'fRest' });
   for (let k = q0; k < F.queue.length; k++) F.queue[k].tag = 'plant' + i;
@@ -1107,7 +1121,7 @@ function clearTaskPlots(id) {
       const r = recs[plot.i]; if (!r || r.taskId !== id) return;
       digAt(plot);
       // toplanmamış domates kaybolmaz: günün hasadına eklenir
-      if (r.state === 'ripe') { today().tomatoes += r.n || 0; updateHarvestUI(true); }
+      if (r.state === 'ripe') { today().tomatoes += r.n || 0; bankPumpkin(r); updateHarvestUI(true); }
       recs[plot.i] = null; if (plot.plant && !plot.plant.removing) plot.plant.remove(); save(true);
     } });
   }
@@ -1129,26 +1143,29 @@ let harvestQueued = false;
 function startHarvest() {
   const recs = today().plots; const ripe = PLOTS.filter(p => recs[p.i]?.state === 'ripe' && p.plant);
   if (!ripe.length || harvestQueued) return; harvestQueued = true;
-  F.task({ type: 'call', fn: () => F.say(pick(LN().harvest)) });
+  F.task({ type: 'call', fn: () => F.say(pick(LNP('harvest'))) });
   F.task({ type: 'equip', tool: 'basket', status: 'fBasket' });
   F.task({ type: 'call', fn: () => F.setBasket(0) });
-  let total = 0, gold = 0; const cols = [];
+  let total = 0, gold = 0, pkN = 0; const cols = [];
   for (const plot of ripe) {
     F.goTo(plot.stand, 'garden', 'fToHarvest', plot.aisle); F.task({ type: 'face', yaw: plot.yaw });
     const pl = plot.plant;
     pl.toms.forEach((tg, k) => { total++; if (tg.userData.gold) gold++; else cols.push(pl.var.c); F.task({ type: 'anim', name: 'pick', dur: .6, hit: .5, status: 'fPicking', onHit: () => flyTomato(pl, k) }); });
+    if (pl.pk && !pl.pk.userData.picked) { pkN++; F.task({ type: 'anim', name: 'pick', dur: .7, hit: .5, status: 'fPicking', onHit: () => flyPumpkin(pl) }); }
     F.task({ type: 'call', fn: () => { recs[plot.i].state = 'picked'; } });
   }
   F.goTo(WP.CRATE, 'yard', 'fToCrate'); F.task({ type: 'face', yaw: Math.PI });
-  F.task({ type: 'anim', name: 'dump', dur: 1.4, hit: .45, status: 'fDumping', onHit: () => dumpBasket(ripe, total, gold, cols) });
+  F.task({ type: 'anim', name: 'dump', dur: 1.4, hit: .45, status: 'fDumping', onHit: () => dumpBasket(ripe, total, gold, cols, pkN) });
   F.task({ type: 'equip', tool: null });
   F.task({ type: 'call', fn: () => { harvestQueued = false; } });
 }
-function dumpBasket(ripe, total, gold, cols = []) {
+function dumpBasket(ripe, total, gold, cols = [], pkN = 0) {
   const n = F.basketCount; const bp = F.tools.basket.getWorldPosition(V());
   for (let k = 0; k < Math.max(n, total); k++) setTimeout(() => spawnFruit(V(CRATE.x + ((k % 5) - 2) * .2 + rand(-.03, .03), Math.max(bp.y + .45, 1.0) + (k / 5 | 0) * .26, CRATE.z + .22), V(rand(-.15, .15), rand(.6, 1), -.5 + rand(-.15, .15)), k < gold, cols[k - gold] || '#e8342a'), k * 110);
   F.setBasket(0);
   const totalBefore = totalTomatoes(); const d = today(); const before = d.tomatoes; d.tomatoes += total; d.golden = (d.golden || 0) + gold;
+  if (pkN) { basketPumpkin(false); d.pumpkins = (d.pumpkins || 0) + pkN; for (let k = 0; k < pkN; k++) setTimeout(() => spawnFruit(V(CRATE.x + rand(-.3, .3), Math.max(bp.y + .6, 1.2), CRATE.z + .15), V(rand(-.1, .1), .4, -.35), false, '#f07a1a', true), 250 + k * 170);
+    setTimeout(() => toast(tr('hwPk', pkN), tr('hwPkSub', d.pumpkins), 'pumpkin'), 1900); }
   setTimeout(() => checkUnlocks(totalBefore, totalTomatoes()), 2200);
   for (const p of ripe) { const r = d.plots[p.i]; if (r) { r.state = 'harvested'; } p.plant?.apply(1); }
   const s = d.sessions.filter(x => x.status === 'ripe'); s.forEach(x => x.status = 'harvested');
@@ -1442,7 +1459,7 @@ async function makeCard() {
   g.fillStyle = '#ef4e3a'; g.fillRect(0, H - 96, W, 96);
   g.fillStyle = '#fff'; g.font = '600 46px Fredoka, sans-serif'; g.fillText('Domat', 72, H - 34);
   const bw = g.measureText('Domat').width; g.font = '800 28px Nunito, sans-serif'; g.globalAlpha = .9; g.fillText('getdomat.com', 72 + bw + 22, H - 38); g.globalAlpha = 1;
-  g.font = '800 26px Nunito, sans-serif'; const extra = [streakDays() ? tr('cardStreak', streakDays()) : '', d.golden ? tr('cardGold', d.golden) : ''].filter(Boolean).join(' · ');
+  g.font = '800 26px Nunito, sans-serif'; const extra = [streakDays() ? tr('cardStreak', streakDays()) : '', d.golden ? tr('cardGold', d.golden) : '', d.pumpkins ? tr('cardPk', d.pumpkins) : ''].filter(Boolean).join(' · ');
   const tw = g.measureText(extra).width; g.fillText(extra, W - 72 - tw, H - 38);
   return new Promise(res => c.toBlob(b => res(b), 'image/png'));
 }
@@ -1560,9 +1577,10 @@ canvas.addEventListener('pointerdown', ev => { downAt = { x: ev.clientX, y: ev.c
 canvas.addEventListener('pointerup', ev => {
   if (!downAt) return; const moved = Math.hypot(ev.clientX - downAt.x, ev.clientY - downAt.y), dt = performance.now() - downAt.t; downAt = null; if (moved > 7 || dt > 450) return;
   AudioFX.ensure(); closePop(); const h = pickAt(ev); if (!h) return; const o = h.object;
-  if (o.userData.farmer) { F.say(pick(LN().poke)); if (!F.busy() || F.sitting) { const wasSitting = F.plan().sitting; if (wasSitting) F.task({ type: 'stand', end: { sitting: false } }); F.task({ type: 'anim', name: 'wave', dur: 1.4 }); if (wasSitting) { F.task({ type: 'sit', end: { sitting: true } }); } } AudioFX.marimba(659, 0, .15); return; }
+  if (o.userData.farmer) { F.say(pick(LNP('poke'))); if (!F.busy() || F.sitting) { const wasSitting = F.plan().sitting; if (wasSitting) F.task({ type: 'stand', end: { sitting: false } }); F.task({ type: 'anim', name: 'wave', dur: 1.4 }); if (wasSitting) { F.task({ type: 'sit', end: { sitting: true } }); } } AudioFX.marimba(659, 0, .15); return; }
   if (o.userData.chicken) { o.userData.chicken.poke(); return; }
   if (o.userData.dog) { pokeDog(); return; }
+  if (o.userData.ghost) { pokeGhost(); return; }
   if (o.userData.fruit) { const b = o.userData.fruit.body; b.wakeUp(); b.applyImpulse(new CANNON.Vec3(rand(-.2, .2), rand(1.1, 1.5), rand(-.2, .2))); b.angularVelocity.set(rand(-8, 8), rand(-8, 8), rand(-8, 8)); AudioFX.pop(); Sparks.emit(o.position.clone(), 0xffb39a, 10, 1, .8, .6, .6); return; }
   if (o.userData.plant) { const p = o.userData.plant; p.shake = 1; if (AudioFX.ctx) AudioFX.noise(AudioFX.ctx.currentTime, .4, .07, 'bandpass', 3000, .7); for (let k = 0; k < 4; k++) Petals.spawn(p.g.position.clone().add(V(rand(-.3, .3), rand(.4, 1), rand(-.3, .3))), pick(['#5fae47', '#4f9a3c']), V(rand(-.5, .5), rand(0, .6), rand(-.5, .5))); return; }
   if (o === windmillBlades.userData.hit) { windBoost = 6; AudioFX.creak(); return; }
@@ -1795,7 +1813,7 @@ function obCommit() {
 function finishOnboard() {
   data.profile.onboarded = true; save(true);
   $('#onboardSheet').hidden = true; renderUI(); renderTasks(); renderActive();
-  setTimeout(() => F.say(fillT(pick(LN().welcome)), 5), 300);
+  setTimeout(() => F.say(fillT(pick(LNP('welcome'))), 5), 300);
 }
 function initOnboard() {
   $('#obBody').addEventListener('click', e => {
@@ -1929,6 +1947,118 @@ function updateSeason(dt) {
   if (SEASON.fall && Math.random() < dt * SEASON.rate) { const tg = pick(treeGroups); Petals.spawn(tg.position.clone().add(V(rand(-1.2, 1.2), 2.6 * tg.scale.x, rand(-1.2, 1.2))), pick(SEASON.fall), V(rand(-.6, .6), rand(-.2, .3), rand(-.6, .6))); }
   if (SEASON.snow) { const n = Math.random() < (dt * SEASON.snow % 1) ? Math.ceil(dt * SEASON.snow) : Math.floor(dt * SEASON.snow); for (let i = 0; i < n; i++) Petals.spawn(V(rand(-11, 11), rand(7, 10), rand(-8, 8)), pick(['#ffffff', '#f2f7ff']), V(rand(-.2, .2), -.4, rand(-.2, .2))); }
 }
+/* ---- Cadılar Bayramı (22 Ekim – 1 Kasım): balkabakları, yarasalar, hayalet, cadı şapkası, balkabağı hasadı ----
+   Ayarlar'dan kapatılır. ?halloween=1 tarih dışında da açar (önizleme, test), ?halloween=0 kapatır. */
+const HW_URL = new URLSearchParams(location.search).get('halloween');
+function hwWindow(d = new Date()) { const m = d.getMonth(), day = d.getDate(); return (m === 9 && day >= 22) || (m === 10 && day <= 1); }
+function hwOn() { if (HW_URL === '0' || CFG.halloween === false) return false; return HW_URL === '1' || hwWindow(); } // kullanıcının "kapalı" tercihi her zaman önce gelir
+function hwOffered() { return HW_URL === '1' || hwWindow(); }
+const HW = new THREE.Group(); HW.visible = false; scene.add(HW);
+// oyma yüzler: gündüz koyu oyuk, akşam içten yanar (tema ışığına bağlı)
+const hwFaceM = new THREE.MeshStandardMaterial({ color: '#241005', emissive: '#ffa62b', emissiveIntensity: 0, roughness: 1, side: THREE.DoubleSide });
+const hwHaloM = new THREE.SpriteMaterial({ map: (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,190,90,1)'); r.addColorStop(.35, 'rgba(255,140,40,.45)'); r.addColorStop(1, 'rgba(255,120,30,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })(), color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 });
+const hwLight = new THREE.PointLight(0xff9a3a, 0, 7, 1.8); hwLight.position.set(DOOR_X, .7, -.9); hwLight.visible = false; scene.add(hwLight);
+const hwX = { built: false, bats: [], ghost: null, ghostHit: null, ghostMat: null, spin: 0, witch: null, scHead: null };
+function carveFace(g, style) {
+  const tri = (w, h) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2, -h / 2); sh.lineTo(w / 2, -h / 2); sh.lineTo(0, h / 2); sh.closePath(); return new THREE.ShapeGeometry(sh); };
+  const grin = (() => { const sh = new THREE.Shape(); sh.moveTo(-.36, .04); sh.quadraticCurveTo(0, -.4, .36, .04);
+    [[.26, -.03], [.18, .06], [.09, -.03], [0, .06], [-.09, -.03], [-.18, .06], [-.26, -.03]].forEach(([x, y]) => sh.lineTo(x, y)); sh.closePath(); return new THREE.ShapeGeometry(sh); })();
+  const eye = style === 1 ? new THREE.CircleGeometry(.12, 18) : tri(.28, .25);
+  const feats = [[eye, -.27, .19, style === 1 ? 0 : .15], [eye, .27, .19, style === 1 ? 0 : -.15], [tri(.13, .12), 0, .02, 0], [grin, 0, -.17, 0]];
+  for (const [geo, x, y, rz] of feats) {
+    const z = Math.sqrt(Math.max(.05, 1 - x * x - (y / .72) ** 2));
+    const n = V(x, y / .52, z).normalize(); const m = new THREE.Mesh(geo, hwFaceM);
+    m.position.set(x, .72 + y, z).addScaledVector(n, .07); m.quaternion.setFromUnitVectors(V(0, 0, 1), n); m.rotateZ(rz); g.add(m);
+  }
+}
+function makePumpkin(size, carved, style = 0, color = '#f07a1a') {
+  const g = new THREE.Group(); add(PUMPKIN_GEO, M(color, { roughness: .55 }), 0, .72, 0, g);
+  const st = add(PK_STEM_GEO, PK_STEM_M, .02, 1.22, 0, g); st.rotation.z = -.28;
+  if (carved) carveFace(g, style);
+  g.scale.setScalar(size); return g;
+}
+function buildBat() {
+  const b = new THREE.Group(), dark = M('#2b2236', { roughness: .7 }), wingM = M('#3a2f4a', { roughness: .8, side: THREE.DoubleSide });
+  add(SPH, dark, 0, 0, 0, b, false).scale.set(.07, .065, .1); add(SPH, dark, 0, .02, .09, b, false).scale.setScalar(.055);
+  for (const s of [-1, 1]) { const e = add(new THREE.ConeGeometry(.025, .07, 5), dark, s * .03, .08, .09, b, false); e.rotation.z = -s * .25; add(SPH_LO, M('#ffe08a', { emissive: '#ffcf40', emissiveIntensity: .8 }), s * .022, .03, .14, b, false).scale.setScalar(.012); }
+  const wing = s => { const w = new THREE.Group(); w.position.set(s * .05, .01, 0); b.add(w); const m = new THREE.Mesh(BAT_WING_GEO, wingM); m.scale.x = s; w.add(m); return w; };
+  b.userData.lw = wing(1); b.userData.rw = wing(-1); b.scale.setScalar(1.35); return b;
+}
+function buildGhost() {
+  const g = new THREE.Group(); const mat = hwX.ghostMat = new THREE.MeshStandardMaterial({ color: '#f7f5ff', emissive: '#e3e8ff', emissiveIntensity: .3, roughness: .6, transparent: true, opacity: .94, side: THREE.DoubleSide });
+  add(SPH, mat, 0, .62, 0, g).scale.set(.34, .36, .32);
+  const sk = new THREE.CylinderGeometry(.34, .45, .62, 28, 6, true); const p = sk.attributes.position;
+  for (let i = 0; i < p.count; i++) { const y = p.getY(i); if (y < -.2) { const a = Math.atan2(p.getZ(i), p.getX(i)); p.setY(i, y + Math.sin(a * 6) * .06 * (-y - .2) / .11); } }
+  sk.computeVertexNormals(); add(sk, mat, 0, .31, 0, g);
+  const ink = M('#2a201c'); for (const s of [-1, 1]) { add(SPH_LO, ink, s * .11, .7, .29, g, false).scale.set(.045, .07, .03); add(SPH_LO, M('#ffc2d1'), s * .18, .6, .3, g, false).scale.set(.05, .03, .02); const a = add(new THREE.CapsuleGeometry(.07, .14, 4, 8), mat, s * .38, .42, .02, g); a.rotation.z = s * .9; }
+  add(SPH_LO, ink, 0, .54, .345, g, false).scale.set(.05, .065, .03);
+  const hit = hwX.ghostHit = add(new THREE.SphereGeometry(.6, 8, 6), new THREE.MeshBasicMaterial({ visible: false }), 0, .5, 0, g, false); hit.userData.ghost = true;
+  g.traverse(o => { o.castShadow = false; }); g.scale.setScalar(1.25); return g; // hayaletin gölgesi olmaz
+}
+function buildWeb(x, y, z, flip, size) {
+  // çit köşesinde çeyrek örümcek ağı: köşeden yayılan teller + aralarında sarkan halkalar
+  const pts = [], N = 5, R = [.28, .5, .72, .94];
+  const at = (a, r) => V(flip * -Math.cos(a) * r * size, -Math.sin(a) * r * size, 0);
+  for (let i = 0; i < N; i++) { const a = i / (N - 1) * Math.PI / 2; pts.push(V(), at(a, 1)); }
+  for (const r of R) for (let i = 0; i < N - 1; i++) { const a0 = i / (N - 1) * Math.PI / 2, a1 = (i + 1) / (N - 1) * Math.PI / 2, mid = at((a0 + a1) / 2, r * .9); pts.push(at(a0, r), mid, mid, at(a1, r)); }
+  const ln = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xf4f1ff, transparent: true, opacity: .75 }));
+  ln.position.set(x, y, z); HW.add(ln);
+}
+function buildHalloween() {
+  hwX.built = true;
+  // balkabakları: veranda basamağı, bahçe kapısı, kasalar, değirmen, göl kıyısı
+  for (const [x, z, s, carved, st, ry] of [[-6.1, -1.3, .44, true, 0, .35], [-3.9, -1.32, .4, true, 1, .25], [-3.5, -.92, .22, false, 0, 0], [-6.55, -.9, .21, false, 0, 1], [.05, -2.45, .4, true, 0, .45], [.1, .55, .26, false, 0, 2], [-1.35, .15, .46, true, 1, .4], [-.8, .55, .24, false, 0, 1.1], [-1.75, .62, .2, false, 0, 2.3], [-3.15, -3.6, .34, true, 0, .5], [7.15, -5.5, .42, true, 0, .3], [7.8, -5.15, .2, false, 0, 1.4], [-6.0, 6.35, .28, false, 0, .7]]) {
+    const p = makePumpkin(s, carved, st, carved ? '#f07a1a' : pick(['#f2892a', '#e86d12', '#f5a142'])); p.position.set(x, 0, z); p.rotation.y = ry; HW.add(p);
+    if (carved) { const h = new THREE.Sprite(hwHaloM); h.position.set(x, s * .9, z); h.scale.setScalar(s * 4.2); h.renderOrder = 4; HW.add(h); }
+  }
+  // örümcek ağları: arka çitin iki köşesi
+  buildWeb(GARDEN.x1 - .04, .66, GARDEN.z0 + .02, 1, .55); buildWeb(GARDEN.x0 + .04, .66, GARDEN.z0 + .02, -1, .5);
+  // flama: evin köşesinden veranda direğine, ampullerin arasına
+  { const c = V(-8.5, 2.6, -3.15), a = V(PORCH.x1 + .05, 2.25, PORCH.z1 - .05), d = V().subVectors(a, c).normalize(), n = 12, cols = ['#f07a1a', '#6b4c9a', '#2a2230', '#fff3d6'];
+    const flag = (() => { const sh = new THREE.Shape(); sh.moveTo(-.11, 0); sh.lineTo(.11, 0); sh.lineTo(0, -.24); sh.closePath(); return new THREE.ShapeGeometry(sh); })();
+    for (let i = 0; i < n; i++) { const t = (i + .5) / n, p = V().lerpVectors(c, a, t).add(V(0, -Math.sin(t * Math.PI) * .35 - .02, 0)); const m = new THREE.Mesh(flag, M(cols[i % cols.length], { side: THREE.DoubleSide, roughness: .8 })); m.position.copy(p); m.rotation.y = -Math.atan2(d.z, d.x); HW.add(m); } }
+  // yarasalar: ev çatısının ve değirmenin üstünde
+  for (const o of [{ c: V(-6, 5.4, -4.6), r: 2.8, sp: .55, ph: 0 }, { c: V(-5.5, 4.8, -4.2), r: 2.0, sp: -.75, ph: 2 }, { c: V(4.5, 4.6, -2.5), r: 2.6, sp: .6, ph: 1 }, { c: V(5, 5.3, -3), r: 3.4, sp: -.48, ph: 3.5 }, { c: V(-1, 6.2, -3.5), r: 4.2, sp: .32, ph: 4.4 }]) { const b = buildBat(); HW.add(b); hwX.bats.push({ b, ...o }); }
+  // hayalet: gölün üstünde süzülür, dokununca "böö"
+  hwX.ghost = buildGhost(); HW.add(hwX.ghost);
+  // Hasan Dede'ye cadı şapkası
+  { const h = hwX.witch = new THREE.Group(), dark = M('#3b2d52', { roughness: .8 });
+    h.position.copy(F.hat.position); h.rotation.copy(F.hat.rotation); F.head.add(h);
+    add(new THREE.CylinderGeometry(.52, .54, .035, 30), dark, 0, 0, 0, h); add(new THREE.CylinderGeometry(.17, .27, .32, 22), dark, 0, .17, 0, h);
+    const c2 = add(new THREE.CylinderGeometry(.08, .17, .26, 18), dark, .03, .44, -.01, h); c2.rotation.set(-.12, 0, -.28);
+    const tip = add(new THREE.ConeGeometry(.08, .26, 16), dark, .12, .62, -.04, h); tip.rotation.set(-.2, 0, -.9);
+    add(new THREE.CylinderGeometry(.275, .275, .07, 24), M('#f07a1a', { roughness: .6 }), 0, .06, 0, h);
+    add(RB(.1, .075, .02, .01), M('#ffd34a', { metalness: .5, roughness: .3 }), 0, .06, .275, h); }
+  // korkuluğun kafası oyma balkabağı
+  { const p = hwX.scHead = makePumpkin(.28, true, 0); p.position.set(0, 1.66, .02); scarecrow.sc.add(p); }
+}
+function applyHalloween() {
+  const on = hwOn(); $('#rowHalloween').hidden = !hwOffered(); $('#setHalloween').setAttribute('aria-checked', String(on)); if (on && !hwX.built) buildHalloween(); if (!hwX.built) return;
+  HW.visible = hwLight.visible = hwX.witch.visible = hwX.scHead.visible = on; F.hat.visible = !on; scarecrow.head.forEach(m => m.visible = !on);
+  const i = extraHits.indexOf(hwX.ghostHit); if (on && i < 0) extraHits.push(hwX.ghostHit); if (!on && i >= 0) extraHits.splice(i, 1);
+}
+function pokeGhost() { hwX.spin = 1; AudioFX.ensure(); AudioFX.boo(); Sparks.emit(hwX.ghost.position.clone().add(V(0, .7, 0)), 0xd9c8ff, 22, 1.6, 1, .8, 1); F.say(fillT(pick(LN().hw_ghost)), 3.5); }
+function updateHalloween(dt, t) {
+  if (!HW.visible) return;
+  hwLight.intensity = theme.glow * .9; hwHaloM.opacity = clamp((theme.glow - .25) / 2) * .85; hwFaceM.emissiveIntensity = Math.max(0, theme.glow - .3) * 2.4; // gündüz koyu oyuk, akşam fener
+  for (const o of hwX.bats) { const a = t * o.sp + o.ph, u = o.b.userData; o.b.position.set(o.c.x + Math.cos(a) * o.r, o.c.y + Math.sin(t * 1.3 + o.ph) * .4, o.c.z + Math.sin(a) * o.r * .8);
+    o.b.rotation.set(0, Math.atan2(-Math.sin(a) * Math.sign(o.sp), Math.cos(a) * .8 * Math.sign(o.sp)), Math.sign(o.sp) * .35); const f = Math.sin(t * 15 + o.ph * 3) * .75; u.lw.rotation.z = f; u.rw.rotation.z = -f; }
+  const g = hwX.ghost, a = t * .22; g.position.set(-3.2 + Math.cos(a) * 1.7, 1.45 + Math.sin(t * 1.6) * .16 + Math.sin(hwX.spin * Math.PI) * .45, 2.7 + Math.sin(a) * 1.1);
+  // hep kameraya dönük süzülür (yüzü görünsün); dokununca kendi çevresinde döner
+  if (hwX.spin > 0) { hwX.spin = Math.max(0, hwX.spin - dt * 1.25); g.rotation.y += dt * 16 * hwX.spin; }
+  else { let dy = .35 + Math.sin(t * .7) * .4 - g.rotation.y; dy = ((dy + Math.PI) % 6.283 + 6.283) % 6.283 - Math.PI; g.rotation.y += dy * Math.min(1, dt * 2); }
+  g.rotation.z = Math.sin(t * 1.1) * .08; hwX.ghostMat.emissiveIntensity = .25 + theme.glow * .2;
+}
+// balkabağı hasadı: Cadılar Bayramı'nda ekilen her fidenin dibinde bir balkabağı büyür, hasatta kasaya gider (domates sayısından ayrı)
+function bankPumpkin(r) { if (r?.pumpkin) { const d = today(); d.pumpkins = (d.pumpkins || 0) + 1; } }
+function flyPumpkin(plant) {
+  const pk = plant.pk; if (!pk || pk.userData.picked) return; plant.g.updateMatrixWorld(); const from = pk.getWorldPosition(V()).add(V(0, .15, 0)); pk.userData.picked = true; pk.scale.setScalar(.0001);
+  const m = new THREE.Mesh(PUMPKIN_GEO, PK_M); m.scale.setScalar(.2); m.castShadow = true; m.position.copy(from); scene.add(m);
+  plant.shake = .6; AudioFX.pluck(); Sparks.emit(from, 0xffa64a, 8, .8, .8, .6, .6); flights.push({ m, from, t: 0, dur: .55, pumpkin: true });
+}
+// testler için (yalnız ?halloween= ile açılınca)
+if (HW_URL !== null) window.__hw = { on: () => HW.visible, poke: () => pokeGhost(), ghost: () => ({ x: hwX.ghost.position.x, y: hwX.ghost.position.y, z: hwX.ghost.position.z, spin: hwX.spin }), hat: () => hwX.witch.visible && !F.hat.visible };
+function basketPumpkin(on) { const B = F.tools.basket.userData; if (!B.pk && on) { B.pk = add(PUMPKIN_GEO, PK_M, .02, .2, 0, F.tools.basket, false); B.pk.scale.setScalar(.12); } if (B.pk) B.pk.visible = on; }
 /* ---- grafik kalitesi (otomatik ölçüm) ---- */
 const QUALITY = { high: { dpr: Math.min(devicePixelRatio || 1, isSmall ? 1.5 : 1.75), shadow: true, bloom: true }, balanced: { dpr: Math.min(devicePixelRatio || 1, 1.25), shadow: true, bloom: true }, low: { dpr: 1, shadow: false, bloom: false } };
 let qLevel = 'high', qMeasure = { t: 0, f: 0, done: false, wait: 3 };
@@ -1957,12 +2087,14 @@ function syncLookUI() {
   $('#setAmbVol').value = CFG.ambVol; $('#outAmbVol').textContent = Math.round(CFG.ambVol * 100) + '%';
   $('#setFxVol').value = CFG.fxVol; $('#outFxVol').textContent = Math.round(CFG.fxVol * 100) + '%';
   $('#setTick').setAttribute('aria-checked', String(!!CFG.tick));
+  $('#rowHalloween').hidden = !hwOffered(); $('#setHalloween').setAttribute('aria-checked', String(hwOn()));
 }
 $('#setSeason').addEventListener('change', e => { CFG.season = e.target.value; save(); applySeason(); });
 $('#setQuality').addEventListener('change', e => { CFG.quality = e.target.value; save(); if (CFG.quality === 'auto') { qMeasure = { t: 0, f: 0, done: false, wait: 1 }; applyQuality('high'); } else applyQuality(CFG.quality); });
 $('#setChime').addEventListener('change', e => { CFG.chime = e.target.value; save(); AudioFX.ensure(); playChime(); });
 for (const [id, k, out] of [['setAmbVol', 'ambVol', 'outAmbVol'], ['setFxVol', 'fxVol', 'outFxVol']]) $('#' + id).addEventListener('input', e => { CFG[k] = parseFloat(e.target.value); $('#' + out).textContent = Math.round(CFG[k] * 100) + '%'; AudioFX.applyVolume(); save(); });
 $('#setTick').addEventListener('click', e => { CFG.tick = !CFG.tick; e.currentTarget.setAttribute('aria-checked', String(CFG.tick)); save(); });
+$('#setHalloween').addEventListener('click', () => { CFG.halloween = CFG.halloween === false; save(); applyHalloween(); });
 /* ---- tekrarlayan görevler ---- */
 function repeatsOn(x, d = new Date()) { if (x.repeat === 'daily') return true; if (x.repeat === 'weekdays') { const w = d.getDay(); return w >= 1 && w <= 5; } return false; }
 let lastRepeatDay = '';
@@ -2009,7 +2141,9 @@ $('#btnAbout').addEventListener('click', () => { closeSheets(); openSheet('#abou
   for (let k = 0; k < inCrate; k++) spawnFruit(V(CRATE.x + rand(-.4, .4), .5 + k * .08, CRATE.z + rand(-.3, .3)), V(0, 0, 0), false);
 })();
 { const tot = totalTomatoes(); for (const u of UNLOCKS) if (u.id !== 'expand' && tot >= u.at) buildUnlock(u, false); }
-applySeason(); if (CFG.quality !== 'auto') applyQuality(CFG.quality); resetRecurring();
+applySeason(); applyHalloween(); if (CFG.quality !== 'auto') applyQuality(CFG.quality); resetRecurring();
+// Cadılar Bayramı'nda her yıl bir kez haber ver
+if (hwOn() && data.profile.hwSeen !== new Date().getFullYear()) { data.profile.hwSeen = new Date().getFullYear(); save(); setTimeout(() => toast(tr('hwT'), tr('hwSub'), 'pumpkin', null, 8000), data.profile.onboarded ? 5600 : 9500); }
 applyI18n(); initTasksUI(); initPicker(); initOnboard();
 TP.open = CFG.tasksOpen ?? (innerWidth >= 1280); tasksPanel().hidden = !TP.open; $('#btnTasks').classList.toggle('on', TP.open);
 updateHarvestUI(); syncAmb(); renderUI(); renderTasks(); renderActive(); onPhaseVisual();
@@ -2062,15 +2196,15 @@ function frame() {
   for (const p of PLOTS) if (p.plant && !p.plant.update(dt, t, windK)) { p.plant = null; }
   for (const p of PLOTS) { const r = d.plots[p.i]; if (r && !p.plant && r.state !== 'growing') p.plant = new Plant(p, r); }
   // farmer
-  F.update(dt, t); updateSigns(dt); updateUnlocks(dt, t); updateSeason(dt); updateQuality(dt); updateTick();
+  F.update(dt, t); updateSigns(dt); updateUnlocks(dt, t); updateSeason(dt); updateHalloween(dt, t); updateQuality(dt); updateTick();
   for (let i = growers.length - 1; i >= 0; i--) { const gr = growers[i]; gr.t += dt * 1.4; gr.g.scale.y = Math.max(.001, easeOutBack(clamp(gr.t))); if (gr.t >= 1) { gr.g.scale.y = 1; growers.splice(i, 1); } }
   doorAnim.v = lerp(doorAnim.v, doorAnim.target, 1 - Math.exp(-dt * 7)); door.rotation.y = -doorAnim.v * 1.7;
   if (WATER) { const sp = F.tools.can.userData.spout.getWorldPosition(TMP.v); for (let k = 0; k < 3; k++) Drops.spawn(sp, 0x9fdcff, V((WATER.plot.x - sp.x) * 1.2 + rand(-.2, .2), rand(-.4, .2), (WATER.plot.z - sp.z) * 1.2 + rand(-.2, .2)), .8); }
   if (bubbleT > 0) { bubbleT -= dt; if (F.root.visible) { const hp = F.headWorld(TMP.v2).add(V(0, .75, 0)).project(camera); const r = canvas.getBoundingClientRect(); bubble.style.left = clamp((hp.x + 1) / 2 * r.width, 125, r.width - 125) + 'px'; bubble.style.top = ((1 - hp.y) / 2 * r.height) + 'px'; bubble.style.opacity = hp.z < 1 ? Math.min(1, bubbleT * 2) : 0; } else bubble.style.opacity = 0; if (bubbleT <= 0) bubble.hidden = true; }
-  nextChatter -= dt; if (nextChatter <= 0) { nextChatter = rand(70, 140); if (S.running && S.phase === 'focus' && !F.busy() && !document.body.classList.contains('zen')) F.say(pick(LN().focus)); }
+  nextChatter -= dt; if (nextChatter <= 0) { nextChatter = rand(70, 140); if (S.running && S.phase === 'focus' && !F.busy() && !document.body.classList.contains('zen')) F.say(pick(LNP('focus'))); }
   // flights into basket
   for (let i = flights.length - 1; i >= 0; i--) { const f = flights[i]; f.t += dt / f.dur; const to = F.tools.basket.getWorldPosition(TMP.v).add(V(0, .15, 0)); const k = clamp(f.t); f.m.position.lerpVectors(f.from, to, k); f.m.position.y += Math.sin(k * Math.PI) * .6; f.m.rotation.x += dt * 8;
-    if (f.t >= 1) { scene.remove(f.m); flights.splice(i, 1); F.setBasket(Math.min(10, F.basketCount + 1)); AudioFX.tock(2); } }
+    if (f.t >= 1) { scene.remove(f.m); flights.splice(i, 1); if (f.pumpkin) basketPumpkin(true); else F.setBasket(Math.min(10, F.basketCount + 1)); AudioFX.tock(2); } }
   // critters + scenery
   chickens.forEach(c => c.update(dt, t));
   butterflies.forEach((b, i) => { const u = b.userData; const a = t * u.sp + u.ph; b.position.set(u.cx + Math.cos(a) * u.r + Math.sin(a * 2.3) * .4, .7 + Math.sin(a * 1.7) * .4 + Math.sin(t * 6 + i) * .05, u.cz + Math.sin(a) * u.r * .7); b.rotation.y = -a; const f = Math.sin(t * 22 + i) * 1.1; u.lw.rotation.z = f; u.rw.rotation.z = -f; });
@@ -2107,7 +2241,7 @@ requestAnimationFrame(frame);
 setTimeout(() => camTo(BASE_TARGET, CAM.r, reduceMotion ? .01 : 4.4, { phi: CAM.phi, theta: CAM.theta }), 100);
 setTimeout(() => {
   F.goTo(WP.PORCH_FRONT, 'porch', 'fOut'); F.task({ type: 'face', yaw: 0 }); F.task({ type: 'anim', name: 'stretch', dur: 1.4 });
-  F.task({ type: 'call', fn: () => F.say(S.phase === 'focus' && !S.running ? pick(LN().welcome) : pick(LN().poke)) }); F.task({ type: 'anim', name: 'wave', dur: 1.4 });
+  F.task({ type: 'call', fn: () => F.say(S.phase === 'focus' && !S.running ? pick(LNP('welcome')) : pick(LNP('poke'))) }); F.task({ type: 'anim', name: 'wave', dur: 1.4 });
   if (S.phase !== 'focus') startHarvest();
   sitOnBench();
 }, reduceMotion ? 100 : 3600);

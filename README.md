@@ -51,6 +51,7 @@ as your harvest adds up. The farm is there to make starting the next session a l
 - It grows with your all-time harvest: a beehive, more garden beds, a well, a dog and a greenhouse.
 - Tagged tasks grow different tomato varieties (pink, yellow, black, cherry), and you can collect them all.
 - Seasons follow the calendar or can be set by hand: spring blossoms, autumn leaves, winter snow.
+- Halloween (Oct 22 – Nov 1): carved pumpkins that glow at dusk, bats, a friendly ghost to tap, a witch hat for Grandpa Hasan, and a small pumpkin under every seedling at harvest. Turn it off in Settings.
 - Ambient sound and effects have separate volume controls. There is an optional focus tick and a choice of end-of-focus chime.
 
 **Everywhere**

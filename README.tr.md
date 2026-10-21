@@ -37,6 +37,7 @@ fidenin tabelasına üzerinde çalıştığın görevin adını yazar; molada do
   Karabaş (350, sevilmeyi sever), sera (500). Fide yatakları dolunca bahçe kendiliğinden genişler.
 - **Domates çeşitleri:** etiketli görevler farklı çeşit yetiştirir (pembe, sarı, kara, çeri); Hasat defterinde koleksiyonun görünür.
 - **Mevsimler:** ilkbaharda pembe çiçekler, sonbaharda dökülen yapraklar, kışın kar. Takvime göre otomatik ya da elle.
+- **Cadılar Bayramı (22 Ekim – 1 Kasım):** akşam içten yanan oyma balkabakları, yarasalar, dokununca "böö" diyen bir hayalet, Hasan Dede'ye cadı şapkası ve hasatta her fidenin dibinde küçük bir balkabağı. Ayarlar'dan kapatılabilir.
 - **Tekrarlı görevler:** her gün ya da hafta içi kendiliğinden yenilenen görevler (↻).
 - **Kolay silme:** satırdaki çöp kutusu (masaüstünde üzerine gelince görünür); 5 saniye içinde "Geri al".
 - **Görev silinince yer açılır:** Hasan Dede o görevin fidelerini ve tabelasını söker, yatak yeniden kullanılır

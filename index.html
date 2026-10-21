@@ -27,7 +27,7 @@
     <radialGradient id="tg" cx=".35" cy=".35" r=".75"><stop offset="0" stop-color="#ff9c84"/><stop offset=".55" stop-color="#ef4e3a"/><stop offset="1" stop-color="#b8321f"/></radialGradient>
     <radialGradient id="gg" cx=".35" cy=".35" r=".75"><stop offset="0" stop-color="#fff3b8"/><stop offset=".55" stop-color="#ffc53d"/><stop offset="1" stop-color="#c98a0c"/></radialGradient>
     <symbol id="tomato" viewBox="0 0 40 40"><ellipse cx="20" cy="23" rx="16" ry="14" fill="url(#tg)"/><ellipse cx="14" cy="18" rx="4" ry="2.6" fill="#fff" opacity=".45" transform="rotate(-25 14 18)"/><path d="M20 10l3 -4M20 11c-4-3-8-2-9 0 3 1 5 2 9 1 4 1 6 0 9-1-1-2-5-3-9 0z" fill="#5aa845" stroke="#3d7f2d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="gtomato" viewBox="0 0 40 40"><ellipse cx="20" cy="23" rx="16" ry="14" fill="url(#gg)"/><ellipse cx="14" cy="18" rx="4" ry="2.6" fill="#fff" opacity=".6" transform="rotate(-25 14 18)"/><path d="M20 10l3 -4M20 11c-4-3-8-2-9 0 3 1 5 2 9 1 4 1 6 0 9-1-1-2-5-3-9 0z" fill="#5aa845" stroke="#3d7f2d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="pumpkin" viewBox="0 0 40 40"><ellipse cx="20" cy="24" rx="17" ry="13" fill="#f07a1a"/><ellipse cx="13" cy="24" rx="6" ry="12" fill="#f5913a"/><ellipse cx="27" cy="24" rx="6" ry="12" fill="#f5913a"/><ellipse cx="20" cy="24" rx="5" ry="13" fill="#f7a04a"/><path d="M20 12c0-3 1-5 3-6" fill="none" stroke="#5c6b2a" stroke-width="2.6" stroke-linecap="round"/><path d="M14 21l3-3 3 3zM20 21l3-3 3 3z" fill="#3b1d0c"/><path d="M12.5 27c3 4 12 4 15 0l-2 1.4-2-1.2-2 1.4-2-1.4-2 1.2z" fill="#3b1d0c"/></symbol><symbol id="gtomato" viewBox="0 0 40 40"><ellipse cx="20" cy="23" rx="16" ry="14" fill="url(#gg)"/><ellipse cx="14" cy="18" rx="4" ry="2.6" fill="#fff" opacity=".6" transform="rotate(-25 14 18)"/><path d="M20 10l3 -4M20 11c-4-3-8-2-9 0 3 1 5 2 9 1 4 1 6 0 9-1-1-2-5-3-9 0z" fill="#5aa845" stroke="#3d7f2d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   </defs>
 </svg>
 <div id="app">
@@ -120,6 +120,7 @@
       <div class="row"><label for="setVolume" data-i18n="sVolume">Ses seviyesi</label><div class="ctl"><input type="range" id="setVolume" min="0" max="1" step="0.05"><output id="outVolume"></output></div></div>
       <h3 data-i18n="sLook">Görünüm</h3>
       <div class="row"><label for="setSeason" data-i18n="sSeason">Mevsim</label><div class="ctl"><select class="txtin" id="setSeason"></select></div></div>
+      <div class="row" id="rowHalloween" hidden><label for="setHalloween" data-i18n="sHalloween">Cadılar Bayramı süsleri</label><button class="sw-toggle" id="setHalloween" role="switch" aria-checked="true"></button></div>
       <div class="row"><label for="setQuality" data-i18n="sQuality">Grafik kalitesi</label><div class="ctl"><select class="txtin" id="setQuality"></select></div></div>
       <h3 data-i18n="sSound">Ses</h3>
       <div class="row"><label for="setAmbVol" data-i18n="sAmbVol">Ortam sesi</label><div class="ctl"><input type="range" id="setAmbVol" min="0" max="1" step="0.05"><output id="outAmbVol"></output></div></div>
